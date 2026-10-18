@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalp Engine — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #06060e;
+            --bg-card: rgba(13, 13, 26, 0.82);
+            --bg-card-hover: rgba(18, 18, 36, 0.9);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.14);
+            --text: #eeeef2;
+            --text-secondary: #7a7a95;
+            --text-muted: #4a4a65;
+            --long: #00e68a;
+            --long-dim: rgba(0, 230, 138, 0.12);
+            --long-glow: rgba(0, 230, 138, 0.06);
+            --short: #ff4d6a;
+            --short-dim: rgba(255, 77, 106, 0.12);
+            --short-glow: rgba(255, 77, 106, 0.06);
+            --accent: #7c5cff;
+            --accent-dim: rgba(124, 92, 255, 0.12);
+            --radius: 14px;
+            --radius-sm: 8px;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 60% 50% at 15% 0%, rgba(124,92,255,0.07) 0%, transparent 100%),
+                radial-gradient(ellipse 50% 40% at 85% 100%, rgba(0,230,138,0.04) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .app { position: relative; z-index: 1; }
+
+        /* ─── Header ─── */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem 2rem;
+            background: rgba(6,6,14,0.92);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-left { display: flex; align-items: center; gap: 0.75rem; }
+        .header-left h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .version {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: var(--accent-dim);
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        .header-right { display: flex; align-items: center; gap: 1.5rem; }
+
+        /* Countdown */
+        .countdown { display: flex; align-items: center; gap: 0.6rem; }
+        .countdown-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .countdown-bar {
+            width: 100px;
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .countdown-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), #a78bfa);
+            border-radius: 4px;
+            transition: width 1s linear;
+        }
+        .countdown-time {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 28px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Connection status */
+        .status { display: flex; align-items: center; gap: 0.4rem; }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: background 0.3s;
+        }
+        .status-dot.connected { background: var(--long); box-shadow: 0 0 8px var(--long); animation: pulse 2s infinite; }
+        .status-dot.error { background: var(--short); box-shadow: 0 0 8px var(--short); }
+        .status-text { font-size: 0.72rem; color: var(--text-muted); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ─── Stats Grid ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.9rem;
+            padding: 1.4rem 2rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.2rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+        .stat-icon { font-size: 1.3rem; margin-bottom: 0.3rem; }
+        .stat-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 0.25rem; }
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            transition: all 0.4s ease;
+        }
+        .stat-value.long { color: var(--long); }
+        .stat-value.short { color: var(--short); }
+        .stat-value.accent { color: var(--accent); }
+
+        /* ─── Signals Section ─── */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            margin-bottom: 1rem;
+        }
+        .section-header h2 { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
+        .filters { display: flex; gap: 0.4rem; }
+        .filter-btn {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: inherit;
+        }
+        .filter-btn:hover { border-color: var(--border-hover); color: var(--text); }
+        .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+        .filter-btn.active-long { background: var(--long-dim); border-color: var(--long); color: var(--long); }
+        .filter-btn.active-short { background: var(--short-dim); border-color: var(--short); color: var(--short); }
+
+        .signals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 0.9rem;
+            padding: 0 2rem 1.5rem;
+        }
+
+        /* Signal Card */
+        .signal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.3rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: cardIn 0.45s ease both;
+            border-left: 3px solid;
+            position: relative;
+            overflow: hidden;
+        }
+        .signal-card.long {
+            border-left-color: var(--long);
+            box-shadow: inset 3px 0 16px var(--long-glow);
+        }
+        .signal-card.short {
+            border-left-color: var(--short);
+            box-shadow: inset 3px 0 16px var(--short-glow);
+        }
+        .signal-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; }
+        .card-top-left { display: flex; flex-direction: column; gap: 0.3rem; }
+        .symbol-name { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.3px; }
+        .card-badges { display: flex; gap: 0.35rem; align-items: center; }
+        .badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 5px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .badge-long { background: var(--long-dim); color: var(--long); }
+        .badge-short { background: var(--short-dim); color: var(--short); }
+        .badge-tf { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+        .badge-24h {
+            font-size: 0.6rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+        .badge-24h.pos { background: var(--long-dim); color: var(--long); }
+        .badge-24h.neg { background: var(--short-dim); color: var(--short); }
+
+        /* Score Ring */
+        .score-ring-wrap { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+        .score-ring { width: 52px; height: 52px; transform: rotate(-90deg); }
+        .score-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 3; }
+        .score-ring-fg { fill: none; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease, stroke 0.3s; }
+        .score-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Levels */
+        .levels { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 1.2rem; margin-bottom: 0.7rem; }
+        .level { display: flex; justify-content: space-between; align-items: center; }
+        .level-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .level-value { font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+        .level-value.entry { color: var(--text); }
+
+        /* RR */
+        .rr-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.7rem; }
+        .rr-label { font-size: 0.65rem; color: var(--text-muted); font-weight: 600; }
+        .rr-value { font-size: 0.8rem; font-weight: 700; }
+        .rr-value.good { color: var(--long); }
+        .rr-value.ok { color: #f0c040; }
+        .rr-value.bad { color: var(--short); }
+
+        /* Reasons */
+        .reasons { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        .reason-tag {
+            font-size: 0.58rem;
+            background: rgba(255,255,255,0.04);
+            color: var(--text-secondary);
+            padding: 2px 7px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.05);
+            font-weight: 500;
+        }
+
+        /* ─── Pairs Section ─── */
+        .pairs-section {
+            padding: 0 2rem 2rem;
+        }
+        .pairs-section h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.8rem;
+        }
+        .pairs-table-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .pairs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+        .pairs-table thead th {
+            text-align: left;
+            padding: 0.7rem 1rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.015);
+        }
+        .pairs-table tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s;
+        }
+        .pairs-table tbody tr:last-child { border-bottom: none; }
+        .pairs-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+        .pairs-table td {
+            padding: 0.55rem 1rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-secondary);
+        }
+        .pairs-table td:first-child { color: var(--text); font-weight: 600; }
+        .change-pos { color: var(--long); }
+        .change-neg { color: var(--short); }
+
+        /* ─── Empty / Loading States ─── */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+            gap: 0.8rem;
+        }
+        .empty-state .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state p { font-size: 0.85rem; }
+
+        /* ─── Paper Trading Section ─── */
+        .paper-section { padding: 0 2rem 2rem; }
+        .paper-section h2 { font-size: 1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.8rem; }
+
+        .paper-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.7rem;
+            margin-bottom: 1rem;
+        }
+        .paper-stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.85rem 1rem;
+            backdrop-filter: blur(10px);
+        }
+        .paper-stat-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 0.2rem; }
+        .paper-stat-value { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .paper-stat-value.positive { color: var(--long); }
+        .paper-stat-value.negative { color: var(--short); }
+        .paper-stat-value.neutral  { color: var(--accent); }
+
+        .paper-table-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .paper-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+        .paper-table thead th {
+            text-align: left;
+            padding: 0.65rem 1rem;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.015);
+        }
+        .paper-table tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s;
+        }
+        .paper-table tbody tr:last-child { border-bottom: none; }
+        .paper-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+        .paper-table td {
+            padding: 0.5rem 1rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-secondary);
+        }
+        .paper-table td:first-child { color: var(--text); font-weight: 600; }
+        .tp1-badge {
+            font-size: 0.58rem; font-weight: 700;
+            background: rgba(0,230,138,0.15); color: var(--long);
+            padding: 1px 6px; border-radius: 4px;
+        }
+
+        /* ─── Footer ─── */
+        .footer {
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 1100px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .header { padding: 0.7rem 1rem; flex-direction: column; gap: 0.6rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); padding: 1rem; gap: 0.6rem; }
+            .signals-grid { grid-template-columns: 1fr; padding: 0 1rem 1rem; }
+            .section-header { padding: 0 1rem; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+            .pairs-section { padding: 0 1rem 1.5rem; }
+            .countdown-bar { width: 60px; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ─── Scrollbar ─── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1>⚡ SCALP ENGINE</h1>
+            <span class="version">LIVE</span>
+        </div>
+        <div class="header-right">
+            <div class="countdown">
+                <span class="countdown-label">Следующий скан</span>
+                <div class="countdown-bar"><div class="countdown-fill" id="countdownFill"></div></div>
+                <span class="countdown-time" id="countdownTime">—</span>
+            </div>
+            <div class="status">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Подключение...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <section class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-label">Пары</div>
+            <div class="stat-value" id="statPairs">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-label">Сигналы</div>
+            <div class="stat-value accent" id="statSignals">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-label">Long</div>
+            <div class="stat-value long" id="statLong">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🔴</div>
+            <div class="stat-label">Short</div>
+            <div class="stat-value short" id="statShort">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-label">Top Score</div>
+            <div class="stat-value accent" id="statTop">—</div>
+        </div>
+    </section>
+
+    <!-- Signals -->
+    <div class="section-header">
+        <h2>📊 Активные сигналы</h2>
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all" id="filterAll">Все</button>
+            <button class="filter-btn" data-filter="LONG" id="filterLong">Long</button>
+            <button class="filter-btn" data-filter="SHORT" id="filterShort">Short</button>
+        </div>
+    </div>
+    <div class="signals-grid" id="signalsGrid">
+        <div class="empty-state" id="signalsEmpty">
+            <div class="spinner"></div>
+            <p>Ожидание первого скана...</p>
+        </div>
+    </div>
+
+    <!-- Paper Trading -->
+    <section class="paper-section">
+        <h2>🤖 Paper Trading — Спот</h2>
+        <div class="paper-stats">
+            <div class="paper-stat">
+                <div class="paper-stat-label">Баланс (USDT)</div>
+                <div class="paper-stat-value neutral" id="paperBalance">—</div>
+            </div>
+            <div class="paper-stat">
+                <div class="paper-stat-label">P&amp;L (USDT)</div>
+                <div class="paper-stat-value" id="paperPnl">—</div>
+            </div>
+            <div class="paper-stat">
+                <div class="paper-stat-label">Сделок</div>
+                <div class="paper-stat-value neutral" id="paperTrades">—</div>
+            </div>
+            <div class="paper-stat">
+                <div class="paper-stat-label">Win Rate</div>
+                <div class="paper-stat-value neutral" id="paperWin">—</div>
+            </div>
+        </div>
+        <div class="paper-table-wrap">
+            <table class="paper-table">
+                <thead>
+                    <tr>
+                        <th>Пара</th>
+                        <th>TF</th>
+                        <th>Entry</th>
+                        <th>SL</th>
+                        <th>TP1</th>
+                        <th>TP2</th>
+                        <th>Qty</th>
+                        <th>Score</th>
+                        <th>Открыта</th>
+                    </tr>
+                </thead>
+                <tbody id="paperBody">
+                    <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Нет открытых позиций</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Volatile Pairs -->
+    <section class="pairs-section">
+        <h2>🔥 Волатильные пары</h2>
+        <div class="pairs-table-wrap">
+            <table class="pairs-table">
+                <thead>
+                    <tr>
+                        <th>Пара</th>
+                        <th>Цена</th>
+                        <th>24h %</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Объём (USDT)</th>
+                    </tr>
+                </thead>
+                <tbody id="pairsBody">
+                    <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Ожидание данных...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <span id="lastUpdate">Ожидание подключения...</span>
+    </footer>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    /* ── Helpers ── */
+    function fmtPrice(v) {
+        if (v >= 10000) return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (v >= 1) return v.toFixed(4);
+        var s = v.toFixed(8);
+        // trim trailing zeros but keep at least 2
+        return s.replace(/0+$/, "").replace(/\.$/, ".00");
+    }
+    function fmtVol(v) {
+        if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
+        if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+        if (v >= 1e3) return (v / 1e3).toFixed(0) + "K";
+        return v.toFixed(0);
+    }
+    function fmtChange(v) {
+        return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
+    }
+    function escapeHtml(s) {
+        var d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    /* ── State ── */
+    var ws = null;
+    var currentFilter = "all";
+    var latestSignals = [];
+    var scanInterval = 30;
+    var countdownSec = 0;
+    var countdownTimer = null;
+    var lastScanTs = 0;
+
+    /* ── DOM refs ── */
+    var $dot = document.getElementById("statusDot");
+    var $statusText = document.getElementById("statusText");
+    var $countdownFill = document.getElementById("countdownFill");
+    var $countdownTime = document.getElementById("countdownTime");
+    var $signalsGrid = document.getElementById("signalsGrid");
+    var $signalsEmpty = document.getElementById("signalsEmpty");
+    var $pairsBody = document.getElementById("pairsBody");
+    var $lastUpdate = document.getElementById("lastUpdate");
+    var $statPairs = document.getElementById("statPairs");
+    var $statSignals = document.getElementById("statSignals");
+    var $statLong = document.getElementById("statLong");
+    var $statShort = document.getElementById("statShort");
+    var $statTop = document.getElementById("statTop");
+
+    /* ── Filters ── */
+    document.querySelectorAll(".filter-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            document.querySelectorAll(".filter-btn").forEach(function (b) {
+                b.className = "filter-btn";
+            });
+            var f = btn.getAttribute("data-filter");
+            currentFilter = f;
+            if (f === "LONG") btn.classList.add("active-long");
+            else if (f === "SHORT") btn.classList.add("active-short");
+            else btn.classList.add("active");
+            renderSignals();
+        });
+    });
+
+    /* ── Score ring SVG ── */
+    function scoreRingSvg(score, side) {
+        var circ = 2 * Math.PI * 18;
+        var offset = circ - (score / 100) * circ;
+        var color = side === "LONG" ? "var(--long)" : "var(--short)";
+        return '<div class="score-ring-wrap">' +
+            '<svg class="score-ring" viewBox="0 0 40 40">' +
+            '<circle class="score-ring-bg" cx="20" cy="20" r="18"/>' +
+            '<circle class="score-ring-fg" cx="20" cy="20" r="18" ' +
+            'stroke="' + color + '" ' +
+            'stroke-dasharray="' + circ.toFixed(1) + '" ' +
+            'stroke-dashoffset="' + offset.toFixed(1) + '"/>' +
+            '</svg>' +
+            '<div class="score-value" style="color:' + color + '">' + score.toFixed(0) + '</div>' +
+            '</div>';
+    }
+
+    /* ── Render signals ── */
+    function renderSignals() {
+        var filtered = latestSignals;
+        if (currentFilter !== "all") {
+            filtered = latestSignals.filter(function (s) { return s.side === currentFilter; });
+        }
+
+        if (filtered.length === 0) {
+            $signalsGrid.innerHTML = '<div class="empty-state"><p>' +
+                (latestSignals.length === 0 ? 'Нет сигналов выше порога' : 'Нет сигналов для фильтра «' + escapeHtml(currentFilter) + '»') +
+                '</p></div>';
+            return;
+        }
+
+        var html = "";
+        filtered.forEach(function (s, i) {
+            var sideClass = s.side === "LONG" ? "long" : "short";
+            var badgeSide = s.side === "LONG" ? "badge-long" : "badge-short";
+            var changeClass = s.change_24h >= 0 ? "pos" : "neg";
+            var rrClass = s.rr >= 1.5 ? "good" : (s.rr >= 1 ? "ok" : "bad");
+
+            html += '<div class="signal-card ' + sideClass + '" style="animation-delay:' + (i * 0.06) + 's">';
+            html += '<div class="card-top">';
+            html += '<div class="card-top-left">';
+            html += '<div class="symbol-name">' + escapeHtml(s.symbol) + '</div>';
+            html += '<div class="card-badges">';
+            html += '<span class="badge ' + badgeSide + '">' + escapeHtml(s.side) + '</span>';
+            html += '<span class="badge badge-tf">' + escapeHtml(s.timeframe) + '</span>';
+            html += '<span class="badge badge-24h ' + changeClass + '">' + fmtChange(s.change_24h) + '</span>';
+            html += '</div></div>';
+            html += scoreRingSvg(s.score, s.side);
+            html += '</div>';
+
+            html += '<div class="levels">';
+            html += '<div class="level"><span class="level-label">Entry</span><span class="level-value entry">' + fmtPrice(s.entry) + '</span></div>';
+            html += '<div class="level"><span class="level-label">SL</span><span class="level-value">' + fmtPrice(s.sl) + '</span></div>';
+            html += '<div class="level"><span class="level-label">TP1</span><span class="level-value">' + fmtPrice(s.tp1) + '</span></div>';
+            html += '<div class="level"><span class="level-label">TP2</span><span class="level-value">' + fmtPrice(s.tp2) + '</span></div>';
+            html += '</div>';
+
+            html += '<div class="rr-bar">';
+            html += '<span class="rr-label">R:R</span>';
+            html += '<span class="rr-value ' + rrClass + '">' + s.rr.toFixed(2) + '</span>';
+            html += '</div>';
+
+            if (s.reasons && s.reasons.length > 0) {
+                html += '<div class="reasons">';
+                s.reasons.forEach(function (r) {
+                    html += '<span class="reason-tag">' + escapeHtml(r) + '</span>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+        });
+        $signalsGrid.innerHTML = html;
+    }
+
+    /* ── Render pairs table ── */
+    function renderPairs(pairs) {
+        if (!pairs || pairs.length === 0) {
+            $pairsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Нет данных</td></tr>';
+            return;
+        }
+        var html = "";
+        pairs.forEach(function (p) {
+            var changeClass = p.change_24h >= 0 ? "change-pos" : "change-neg";
+            html += "<tr>";
+            html += "<td>" + escapeHtml(p.symbol) + "</td>";
+            html += "<td>" + fmtPrice(p.last) + "</td>";
+            html += '<td class="' + changeClass + '">' + fmtChange(p.change_24h) + "</td>";
+            html += "<td>" + fmtPrice(p.high) + "</td>";
+            html += "<td>" + fmtPrice(p.low) + "</td>";
+            html += "<td>" + fmtVol(p.volume) + "</td>";
+            html += "</tr>";
+        });
+        $pairsBody.innerHTML = html;
+    }
+
+    /* ── Update stats ── */
+    function updateStats(stats) {
+        $statPairs.textContent = stats.total_pairs;
+        $statSignals.textContent = stats.total_signals;
+        $statLong.textContent = stats.long_count;
+        $statShort.textContent = stats.short_count;
+        $statTop.textContent = stats.top_score > 0 ? stats.top_score.toFixed(1) : "—";
+    }
+
+    /* ── Paper Trading ── */
+    var $paperBalance = document.getElementById("paperBalance");
+    var $paperPnl     = document.getElementById("paperPnl");
+    var $paperTrades  = document.getElementById("paperTrades");
+    var $paperWin     = document.getElementById("paperWin");
+    var $paperBody    = document.getElementById("paperBody");
+
+    function updatePaper(p) {
+        if (!p) return;
+        $paperBalance.textContent = p.balance.toFixed(2) + " $";
+        var pnl = p.pnl;
+        $paperPnl.textContent = (pnl >= 0 ? "+" : "") + pnl.toFixed(2) + " $";
+        $paperPnl.className = "paper-stat-value " + (pnl >= 0 ? "positive" : "negative");
+        $paperTrades.textContent = p.total_trades;
+        $paperWin.textContent = p.total_trades ? p.win_rate.toFixed(1) + "%" : "—";
+
+        var positions = p.open_positions || [];
+        if (positions.length === 0) {
+            $paperBody.innerHTML = "<tr><td colspan='9' style='text-align:center;color:var(--text-muted);padding:1.5rem;'>Нет открытых позиций</td></tr>";
+            return;
+        }
+        var html = "";
+        positions.forEach(function(pos) {
+            html += "<tr>";
+            html += "<td>" + escapeHtml(pos.symbol) + "</td>";
+            html += "<td>" + escapeHtml(pos.timeframe) + "</td>";
+            html += "<td>" + fmtPrice(pos.entry) + "</td>";
+            html += "<td style='color:var(--short)'>" + fmtPrice(pos.sl) + "</td>";
+            html += "<td style='color:var(--long)'>" + fmtPrice(pos.tp1) + (pos.hit_tp1 ? " <span class='tp1-badge'>✓</span>" : "") + "</td>";
+            html += "<td style='color:var(--long)'>" + fmtPrice(pos.tp2) + "</td>";
+            html += "<td>" + pos.qty.toFixed(4) + "</td>";
+            html += "<td style='color:var(--accent)'>" + pos.score.toFixed(0) + "</td>";
+            var t = pos.opened_at ? pos.opened_at.replace("T"," ").replace("Z","") : "—";
+            html += "<td>" + escapeHtml(t) + "</td>";
+            html += "</tr>";
+        });
+        $paperBody.innerHTML = html;
+    }
+
+    /* ── Countdown ── */
+    function startCountdown(interval) {
+        scanInterval = interval;
+        countdownSec = interval;
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(function () {
+            countdownSec = Math.max(0, countdownSec - 1);
+            var pct = ((scanInterval - countdownSec) / scanInterval) * 100;
+            $countdownFill.style.width = pct + "%";
+            $countdownTime.textContent = countdownSec + "с";
+        }, 1000);
+    }
+
+    /* ── Handle incoming data ── */
+    function handleData(data) {
+        latestSignals = data.signals || [];
+        updateStats(data.stats || {});
+        renderSignals();
+        renderPairs(data.pairs || []);
+        updatePaper(data.paper || null);
+
+        lastScanTs = data.ts || Date.now() / 1000;
+        var now = new Date(lastScanTs * 1000);
+        $lastUpdate.textContent = "Последнее обновление: " + now.toLocaleTimeString("ru-RU");
+
+        if (data.scan_interval) {
+            startCountdown(data.scan_interval);
+        }
+    }
+
+    /* ── WebSocket ── */
+    function setStatus(connected) {
+        if (connected) {
+            $dot.className = "status-dot connected";
+            $statusText.textContent = "Онлайн";
+        } else {
+            $dot.className = "status-dot error";
+            $statusText.textContent = "Переподключение...";
+        }
+    }
+
+    function connect() {
+        var proto = location.protocol === "https:" ? "wss:" : "ws:";
+        ws = new WebSocket(proto + "//" + location.host + "/ws");
+
+        ws.onopen = function () {
+            setStatus(true);
+        };
+        ws.onmessage = function (evt) {
+            try {
+                var data = JSON.parse(evt.data);
+                handleData(data);
+            } catch (e) {
+                // ignore parse errors
+            }
+        };
+        ws.onclose = function () {
+            setStatus(false);
+            setTimeout(connect, 3000);
+        };
+        ws.onerror = function () {
+            ws.close();
+        };
+    }
+
+    connect();
+})();
+</script>
+</body>
+</html>
